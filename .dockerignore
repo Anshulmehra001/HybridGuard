@@ -1,0 +1,10 @@
+# Docker ignore file
+target/
+.git/
+.kiro/
+*.md
+!README.md
+!COMPLETE_GUIDE.md
+*.enc
+*.json
+test*

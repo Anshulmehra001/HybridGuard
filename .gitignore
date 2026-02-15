@@ -1,0 +1,31 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.kiro/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+*.enc
+*.dec
+test_*
+*.key
+*.json
+
+# Logs
+*.log
+
+# Development
+.env
+.env.local
