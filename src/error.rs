@@ -11,8 +11,14 @@ pub enum HybridGuardError {
     #[error("Encryption error: {0}")]
     Encryption(String),
     
+    #[error("Encryption error: {0}")]
+    EncryptionError(String),
+    
     #[error("Decryption error: {0}")]
     Decryption(String),
+    
+    #[error("Decryption error: {0}")]
+    DecryptionError(String),
     
     #[error("Key generation error: {0}")]
     KeyGeneration(String),

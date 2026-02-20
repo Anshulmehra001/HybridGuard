@@ -4,6 +4,7 @@
 pub mod layer1_mlkem;
 pub mod layer2_hqc;
 pub mod layer3_noise;
+pub mod layer4_fhe;
 
 use crate::error::Result;
 

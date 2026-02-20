@@ -8,6 +8,7 @@ use crate::layers::{
     layer1_mlkem::MlKemLayer,
     layer2_hqc::HqcLayer,
     layer3_noise::QuantumNoiseLayer,
+    layer4_fhe::FHELayer,
 };
 use std::time::Instant;
 
@@ -16,7 +17,7 @@ pub struct HybridGuardEncryptor {
     layer1: MlKemLayer,
     layer2: HqcLayer,
     layer3: QuantumNoiseLayer,
-    // layer4: FheLayer, // TODO: Add when FHE is implemented
+    layer4: FHELayer,
 }
 
 impl HybridGuardEncryptor {
@@ -26,6 +27,7 @@ impl HybridGuardEncryptor {
             layer1: MlKemLayer::new(),
             layer2: HqcLayer::new(),
             layer3: QuantumNoiseLayer::new(),
+            layer4: FHELayer::new(),
         }
     }
     
@@ -50,9 +52,10 @@ impl HybridGuardEncryptor {
         let layer3_output = self.layer3.encrypt(&layer2_output, &keys.layer3_key)?;
         log::info!("   Output: {} bytes", layer3_output.len());
         
-        // Layer 4: Homomorphic Encryption (TODO)
-        log::info!("🔐 Layer 4: Homomorphic encryption (coming soon)...");
-        let final_output = layer3_output; // For now, skip layer 4
+        // Layer 4: Homomorphic Encryption
+        log::info!("🔐 Layer 4: Homomorphic encryption...");
+        let final_output = self.layer4.encrypt(&layer3_output, &keys.layer4_key)?;
+        log::info!("   Output: {} bytes", final_output.len());
         
         let elapsed = start.elapsed();
         log::info!("✅ Encryption complete in {:?}", elapsed);
@@ -69,9 +72,10 @@ impl HybridGuardEncryptor {
         
         log::info!("Starting 4-layer decryption of {} bytes", encrypted.ciphertext.len());
         
-        // Layer 4: Homomorphic Decryption (TODO)
-        log::info!("🔓 Layer 4: Homomorphic decryption (coming soon)...");
-        let layer4_output = encrypted.ciphertext.clone(); // For now, skip layer 4
+        // Layer 4: Homomorphic Decryption
+        log::info!("🔓 Layer 4: Homomorphic decryption...");
+        let layer4_output = self.layer4.decrypt(&encrypted.ciphertext, &keys.layer4_key)?;
+        log::info!("   Output: {} bytes", layer4_output.len());
         
         // Layer 3: Quantum Noise Removal
         log::info!("🔓 Layer 3: Quantum noise removal...");
@@ -113,9 +117,9 @@ impl HybridGuardEncryptor {
                 status: "Active".to_string(),
             },
             LayerInfo {
-                name: "Homomorphic Encryption".to_string(),
-                security_level: 256,
-                status: "Coming Soon".to_string(),
+                name: self.layer4.name().to_string(),
+                security_level: self.layer4.security_level(),
+                status: "Active".to_string(),
             },
         ]
     }

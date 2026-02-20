@@ -3,61 +3,71 @@
 
 use crate::error::{HybridGuardError, Result};
 use crate::layers::EncryptionLayer;
-use rand::Rng;
+use sha3::{Sha3_256, Digest};
 
 /// Quantum Noise Injection layer
 /// Adds cryptographically secure random noise to confuse AI attackers
 pub struct QuantumNoiseLayer {
-    noise_strength: f64,
+    security_level: u32,
 }
 
 impl QuantumNoiseLayer {
     pub fn new() -> Self {
         Self {
-            noise_strength: 0.1, // 10% noise injection
+            security_level: 256,
         }
     }
     
-    /// Inject quantum-inspired noise into the data
-    fn inject_noise(&self, data: &[u8]) -> Vec<u8> {
-        let mut rng = rand::thread_rng();
-        let mut noisy_data = Vec::with_capacity(data.len() + data.len() / 10);
+    /// Generate deterministic quantum-inspired noise from key
+    fn generate_noise(&self, key: &[u8], length: usize) -> Vec<u8> {
+        let mut noise = Vec::with_capacity(length);
+        let mut counter = 0u64;
         
-        for &byte in data {
-            noisy_data.push(byte);
-            
-            // Randomly inject noise bytes
-            if rng.gen::<f64>() < self.noise_strength {
-                noisy_data.push(rng.gen());
-            }
+        while noise.len() < length {
+            let mut hasher = Sha3_256::new();
+            hasher.update(key);
+            hasher.update(b"quantum-noise-layer3");
+            hasher.update(&counter.to_le_bytes());
+            noise.extend_from_slice(&hasher.finalize());
+            counter += 1;
         }
         
-        noisy_data
-    }
-    
-    /// Remove quantum noise from the data
-    fn remove_noise(&self, data: &[u8]) -> Vec<u8> {
-        // TODO: Implement proper noise removal
-        // For now, just return the data
-        data.to_vec()
+        noise.truncate(length);
+        noise
     }
 }
 
 impl EncryptionLayer for QuantumNoiseLayer {
-    fn encrypt(&self, data: &[u8], _key: &[u8]) -> Result<Vec<u8>> {
+    fn encrypt(&self, data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
         log::info!("Layer 3 (Quantum Noise): Injecting noise into {} bytes", data.len());
         
-        let noisy_data = self.inject_noise(data);
+        // Generate deterministic noise from key
+        let noise = self.generate_noise(key, data.len());
+        
+        // XOR data with noise to inject it
+        let mut noisy_data = Vec::with_capacity(data.len());
+        for (d, n) in data.iter().zip(noise.iter()) {
+            noisy_data.push(d ^ n);
+        }
         
         log::info!("Layer 3 (Quantum Noise): Output size {} bytes", noisy_data.len());
         
         Ok(noisy_data)
     }
     
-    fn decrypt(&self, data: &[u8], _key: &[u8]) -> Result<Vec<u8>> {
+    fn decrypt(&self, data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
         log::info!("Layer 3 (Quantum Noise): Removing noise from {} bytes", data.len());
         
-        let clean_data = self.remove_noise(data);
+        // Generate same deterministic noise from key
+        let noise = self.generate_noise(key, data.len());
+        
+        // XOR again to remove noise (XOR is reversible)
+        let mut clean_data = Vec::with_capacity(data.len());
+        for (d, n) in data.iter().zip(noise.iter()) {
+            clean_data.push(d ^ n);
+        }
+        
+        log::info!("Layer 3 (Quantum Noise): Cleaned to {} bytes", clean_data.len());
         
         Ok(clean_data)
     }
@@ -67,7 +77,7 @@ impl EncryptionLayer for QuantumNoiseLayer {
     }
     
     fn security_level(&self) -> u32 {
-        128 // Provides additional 128-bit security against side-channel attacks
+        self.security_level
     }
 }
 
@@ -76,19 +86,39 @@ mod tests {
     use super::*;
     
     #[test]
-    fn test_noise_layer() {
+    fn test_noise_layer_info() {
         let layer = QuantumNoiseLayer::new();
         assert_eq!(layer.name(), "Quantum Noise Injection");
-        assert_eq!(layer.security_level(), 128);
+        assert_eq!(layer.security_level(), 256);
     }
     
     #[test]
-    fn test_noise_injection() {
+    fn test_noise_encrypt_decrypt() {
         let layer = QuantumNoiseLayer::new();
-        let data = vec![1, 2, 3, 4, 5];
-        let noisy = layer.inject_noise(&data);
+        let key = vec![0u8; 32]; // Test key
+        let data = b"Test data for quantum noise layer";
         
-        // Noisy data should be larger
-        assert!(noisy.len() >= data.len());
+        // Encrypt (inject noise)
+        let encrypted = layer.encrypt(data, &key).unwrap();
+        assert_eq!(encrypted.len(), data.len()); // Same size
+        assert_ne!(&encrypted[..], data); // Should be different
+        
+        // Decrypt (remove noise)
+        let decrypted = layer.decrypt(&encrypted, &key).unwrap();
+        assert_eq!(data.to_vec(), decrypted); // Should match original
+    }
+    
+    #[test]
+    fn test_noise_deterministic() {
+        let layer = QuantumNoiseLayer::new();
+        let key = vec![42u8; 32];
+        let data = b"Deterministic test";
+        
+        // Encrypt twice with same key
+        let encrypted1 = layer.encrypt(data, &key).unwrap();
+        let encrypted2 = layer.encrypt(data, &key).unwrap();
+        
+        // Should produce same result
+        assert_eq!(encrypted1, encrypted2);
     }
 }

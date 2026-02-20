@@ -28,6 +28,7 @@ impl EncryptedData {
                 "ML-KEM-768".to_string(),
                 "HQC".to_string(),
                 "QuantumNoise".to_string(),
+                "FHE".to_string(),
             ],
             version: "0.1.0".to_string(),
             timestamp: std::time::SystemTime::now()
